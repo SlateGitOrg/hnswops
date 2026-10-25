@@ -29,6 +29,7 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod bench;
 pub mod brute;
 pub mod config;
 pub mod dataset;
@@ -47,4 +48,7 @@ pub mod visited;
 pub use config::HnswConfig;
 pub use distance::Metric;
 pub use error::{Error, Result};
-pub use hnsw::{Filter, HealthReport, Hit, Hnsw, SearchParams, SearchResult, SearchStats, Strategy, VacuumReport};
+pub use hnsw::{Filter, FilterPlan, HealthReport, Hit, Hnsw, SearchParams, SearchResult, SearchStats, Strategy, VacuumReport};
+pub use migration::{Migration, Phase};
+pub use monitor::{MonitorConfig, MonitoredIndex, RecallReport, RecallStatus};
+pub use snapshot::SnapshotStore;
