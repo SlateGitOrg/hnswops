@@ -29,12 +29,15 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod brute;
 pub mod config;
+pub mod dataset;
 pub mod distance;
 pub mod error;
 pub mod hnsw;
 pub mod persist;
 pub mod rng;
+pub mod snapshot;
 pub mod storage;
 pub mod visited;
 
