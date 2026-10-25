@@ -35,6 +35,7 @@ pub mod dataset;
 pub mod distance;
 pub mod error;
 pub mod hnsw;
+pub mod monitor;
 pub mod persist;
 pub mod rng;
 pub mod snapshot;
