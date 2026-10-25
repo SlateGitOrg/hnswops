@@ -14,7 +14,7 @@ use std::collections::{BinaryHeap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
-pub use filter::Filter;
+pub use filter::{Filter, FilterPlan};
 pub use maintenance::{HealthReport, VacuumReport};
 
 use crate::config::{HnswConfig, MAX_LEVEL};

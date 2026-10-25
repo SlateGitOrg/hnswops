@@ -11,7 +11,9 @@
 //!   compute distances only for matches. Exact, and cheap when matches are rare.
 //!
 //! The planner estimates selectivity from a deterministic strided sample of up
-//! to [`SELECTIVITY_SAMPLE`] nodes and switches at the configured threshold.
+//! to [`SELECTIVITY_SAMPLE`] nodes, prices both strategies in distance
+//! evaluations and picks the cheaper one; below the configured
+//! `filter_brute_force_below` selectivity it always scans.
 
 use serde::{Deserialize, Serialize};
 
@@ -139,6 +141,40 @@ impl Hnsw {
         hit as f64 / seen as f64
     }
 
+    /// Choose a strategy for `filter` at beam width `ef` (see [`FilterPlan`]).
+    pub fn plan_filter(&self, filter: &Filter, ef: usize) -> FilterPlan {
+        let selectivity = self.estimate_selectivity(filter);
+        let live = self.live as f64;
+        let expected_matches = selectivity * live;
+        // Widen the beam so that ~ef matches are expected among admitted nodes.
+        let widened = if selectivity > 0.0 {
+            ((ef as f64 / selectivity).ceil() as usize).clamp(ef, self.live.max(ef))
+        } else {
+            self.live.max(ef)
+        };
+        // Cost in distance evaluations. A beam of width W expands about W
+        // nodes, each costing ~M neighbor distances; the scan pays one
+        // distance per match plus a predicate per live node (~1/32 of a
+        // distance for typical dimensions).
+        let graph_cost = widened as f64 * self.config.m as f64;
+        let scan_cost = expected_matches + live / SCAN_PREDICATE_RATIO;
+        let strategy = if selectivity < self.config.filter_brute_force_below
+            || expected_matches <= ef as f64
+            || scan_cost <= graph_cost
+        {
+            Strategy::BruteForce
+        } else {
+            Strategy::FilteredGraph
+        };
+        FilterPlan {
+            selectivity,
+            widened_ef: widened,
+            graph_cost,
+            scan_cost,
+            strategy,
+        }
+    }
+
     /// Plan and run a filtered query on a prepared vector.
     pub(super) fn filtered_search(
         &self,
@@ -147,15 +183,31 @@ impl Hnsw {
         ef: usize,
         filter: &Filter,
     ) -> SearchResult {
-        let selectivity = self.estimate_selectivity(filter);
-        let expected_matches = selectivity * self.live as f64;
-        if selectivity < self.config.filter_brute_force_below || expected_matches <= ef as f64 {
-            return self.brute_force(q, k, Some(filter));
+        let plan = self.plan_filter(filter, ef);
+        match plan.strategy {
+            Strategy::BruteForce => self.brute_force(q, k, Some(filter)),
+            _ => self.graph_search(q, k, plan.widened_ef, Some(filter), Strategy::FilteredGraph),
         }
-        // Widen the beam so that ~ef matches are expected among visited nodes.
-        let widened = ((ef as f64 / selectivity).ceil() as usize).clamp(ef, self.live.max(ef));
-        self.graph_search(q, k, widened, Some(filter), Strategy::FilteredGraph)
     }
+}
+
+/// How many predicate evaluations cost as much as one distance evaluation
+/// in the planner's cost model.
+const SCAN_PREDICATE_RATIO: f64 = 32.0;
+
+/// The planner's decision for one filtered query, exposed for diagnostics.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct FilterPlan {
+    /// Estimated fraction of live points matching.
+    pub selectivity: f64,
+    /// Beam width a filtered graph walk would use.
+    pub widened_ef: usize,
+    /// Estimated distance evaluations of the filtered graph walk.
+    pub graph_cost: f64,
+    /// Estimated cost of scanning the matching set exactly.
+    pub scan_cost: f64,
+    /// Chosen strategy.
+    pub strategy: Strategy,
 }
 
 #[cfg(test)]
@@ -220,6 +272,15 @@ mod tests {
         let r = idx.search_with(&q, SearchParams::top(10).filter(&rare)).unwrap();
         assert_eq!(r.stats.strategy, Strategy::BruteForce);
         assert_eq!(r.hits, idx.exact_search(&q, 10, Some(&rare)).unwrap());
+
+        let plan = idx.plan_filter(&common, 64);
+        assert!(plan.graph_cost < plan.scan_cost, "{plan:?}");
+        // A filter matching nothing plans a scan over the full beam.
+        let none = idx.plan_filter(&Filter::TagsAny(1 << 40), 64);
+        assert_eq!((none.strategy, none.widened_ef), (Strategy::BruteForce, 2000));
+        // On a tiny index the scan is cheaper even for common filters.
+        let small = tagged_index(300);
+        assert_eq!(small.plan_filter(&common, 64).strategy, Strategy::BruteForce);
     }
 
     #[test]
