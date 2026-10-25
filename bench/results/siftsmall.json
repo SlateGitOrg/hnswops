@@ -1,0 +1,108 @@
+{
+  "dataset": "siftsmall",
+  "n": 10000,
+  "dim": 128,
+  "queries": 100,
+  "k": 10,
+  "config": {
+    "dim": 128,
+    "metric": "l2",
+    "m": 16,
+    "ef_construction": 200,
+    "ef_search": 64,
+    "seed": 407704128085,
+    "filter_brute_force_below": 0.05
+  },
+  "build": {
+    "n": 10000,
+    "seconds": 1.229031083,
+    "inserts_per_sec": 8136.490718843765,
+    "max_level": 3,
+    "mean_degree_l0": 16.6387
+  },
+  "brute_force_qps": 3732.4825043860646,
+  "sweep": [
+    {
+      "ef": 10,
+      "recall": 0.9440000000000005,
+      "min_recall": 0.7,
+      "qps": 70121.02619424873,
+      "p50_us": 12.417,
+      "p99_us": 46.541000000000004,
+      "mean_distance_evals": 206.4
+    },
+    {
+      "ef": 16,
+      "recall": 0.9700000000000003,
+      "min_recall": 0.7,
+      "qps": 44880.50565369703,
+      "p50_us": 18.292,
+      "p99_us": 98.084,
+      "mean_distance_evals": 263.33
+    },
+    {
+      "ef": 24,
+      "recall": 0.9860000000000003,
+      "min_recall": 0.7,
+      "qps": 34878.26905121859,
+      "p50_us": 26.542,
+      "p99_us": 86.958,
+      "mean_distance_evals": 342.06
+    },
+    {
+      "ef": 32,
+      "recall": 0.9940000000000001,
+      "min_recall": 0.8,
+      "qps": 22262.25045527892,
+      "p50_us": 37.166000000000004,
+      "p99_us": 190.583,
+      "mean_distance_evals": 415.19
+    },
+    {
+      "ef": 48,
+      "recall": 0.9960000000000001,
+      "min_recall": 0.8,
+      "qps": 17576.47097590457,
+      "p50_us": 50.125,
+      "p99_us": 196.541,
+      "mean_distance_evals": 547.0
+    },
+    {
+      "ef": 64,
+      "recall": 0.997,
+      "min_recall": 0.8,
+      "qps": 15681.461231429063,
+      "p50_us": 60.334,
+      "p99_us": 156.167,
+      "mean_distance_evals": 664.68
+    },
+    {
+      "ef": 96,
+      "recall": 0.998,
+      "min_recall": 0.8,
+      "qps": 9954.576564460376,
+      "p50_us": 83.292,
+      "p99_us": 355.125,
+      "mean_distance_evals": 867.26
+    },
+    {
+      "ef": 128,
+      "recall": 1.0,
+      "min_recall": 1.0,
+      "qps": 6770.558227547509,
+      "p50_us": 112.291,
+      "p99_us": 916.458,
+      "mean_distance_evals": 1042.56
+    },
+    {
+      "ef": 256,
+      "recall": 1.0,
+      "min_recall": 1.0,
+      "qps": 3689.9228345275646,
+      "p50_us": 191.5,
+      "p99_us": 1653.667,
+      "mean_distance_evals": 1594.62
+    }
+  ],
+  "platform": "macos/aarch64"
+}

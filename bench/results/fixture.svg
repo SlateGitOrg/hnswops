@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" font-family="sans-serif" font-size="12">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="320" y="22" text-anchor="middle" font-size="14">fixture: QPS vs recall@10 (M=16, efC=200)</text>
+<line x1="70.0" y1="40" x2="70.0" y2="350" stroke="#e5e7eb"/><text x="70.0" y="368" text-anchor="middle">0.90</text>
+<line x1="345.0" y1="40" x2="345.0" y2="350" stroke="#e5e7eb"/><text x="345.0" y="368" text-anchor="middle">0.95</text>
+<line x1="620.0" y1="40" x2="620.0" y2="350" stroke="#e5e7eb"/><text x="620.0" y="368" text-anchor="middle">1.00</text>
+<line x1="70" y1="350.0" x2="620" y2="350.0" stroke="#e5e7eb"/><text x="64" y="354.0" text-anchor="end">1000</text>
+<line x1="70" y1="246.7" x2="620" y2="246.7" stroke="#e5e7eb"/><text x="64" y="250.7" text-anchor="end">10000</text>
+<line x1="70" y1="143.3" x2="620" y2="143.3" stroke="#e5e7eb"/><text x="64" y="147.3" text-anchor="end">100000</text>
+<line x1="70" y1="40.0" x2="620" y2="40.0" stroke="#e5e7eb"/><text x="64" y="44.0" text-anchor="end">1000000</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2" points="133.3,132.0 411.0,163.8 559.5,165.0 603.5,166.7 620.0,180.0 620.0,187.4 620.0,199.9 620.0,211.2 620.0,229.7"/>
+<circle cx="133.3" cy="132.0" r="3.5" fill="#2563eb"/><text x="133.3" y="124.0" text-anchor="middle" fill="#1e3a8a">ef=10</text>
+<circle cx="411.0" cy="163.8" r="3.5" fill="#2563eb"/><text x="411.0" y="155.8" text-anchor="middle" fill="#1e3a8a">ef=16</text>
+<circle cx="559.5" cy="165.0" r="3.5" fill="#2563eb"/><text x="559.5" y="157.0" text-anchor="middle" fill="#1e3a8a">ef=24</text>
+<circle cx="603.5" cy="166.7" r="3.5" fill="#2563eb"/><text x="603.5" y="158.7" text-anchor="middle" fill="#1e3a8a">ef=32</text>
+<circle cx="620.0" cy="180.0" r="3.5" fill="#2563eb"/><text x="620.0" y="172.0" text-anchor="middle" fill="#1e3a8a">ef=48</text>
+<circle cx="620.0" cy="187.4" r="3.5" fill="#2563eb"/><text x="620.0" y="179.4" text-anchor="middle" fill="#1e3a8a">ef=64</text>
+<circle cx="620.0" cy="199.9" r="3.5" fill="#2563eb"/><text x="620.0" y="191.9" text-anchor="middle" fill="#1e3a8a">ef=96</text>
+<circle cx="620.0" cy="211.2" r="3.5" fill="#2563eb"/><text x="620.0" y="203.2" text-anchor="middle" fill="#1e3a8a">ef=128</text>
+<circle cx="620.0" cy="229.7" r="3.5" fill="#2563eb"/><text x="620.0" y="221.7" text-anchor="middle" fill="#1e3a8a">ef=256</text>
+<line x1="70" y1="252.9" x2="620" y2="252.9" stroke="#dc2626" stroke-dasharray="6 4"/><text x="620" y="246.9" text-anchor="end" fill="#dc2626">brute force 8701 QPS (recall 1.0)</text>
+<text x="345" y="390" text-anchor="middle">recall@10</text><text x="16" y="195" text-anchor="middle" transform="rotate(-90 16 195)">queries/second (log, 1 thread)</text></svg>
