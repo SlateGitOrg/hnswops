@@ -17,7 +17,10 @@ use crate::error::{Error, Result};
 
 /// Magic bytes at the start of every vectors file.
 pub const VECTORS_MAGIC: &[u8; 8] = b"HNSWVEC1";
+/// Version of the vectors file layout written in header bytes 8..12.
+pub const VECTORS_VERSION: u32 = 1;
 /// Fixed header size; the payload starts at this (4-byte aligned) offset.
+/// Layout: magic (8) | version u32 | dim u32 | count u64 | 40 reserved zero bytes.
 pub const VECTORS_HEADER_LEN: usize = 64;
 
 /// A read-only mapping of a `vectors.bin` file.
@@ -54,6 +57,16 @@ impl MappedVectors {
         }
         if &mmap[..8] != VECTORS_MAGIC {
             return Err(Error::corrupt(path, "bad magic"));
+        }
+        let version = u32::from_le_bytes(mmap[8..12].try_into().expect("4 bytes"));
+        if version != VECTORS_VERSION {
+            return Err(Error::corrupt(
+                path,
+                format!("unsupported vectors format version {version}"),
+            ));
+        }
+        if mmap[24..VECTORS_HEADER_LEN].iter().any(|&b| b != 0) {
+            return Err(Error::corrupt(path, "reserved header bytes are not zero"));
         }
         let file_dim = u32::from_le_bytes(mmap[12..16].try_into().expect("4 bytes")) as usize;
         let file_count = u64::from_le_bytes(mmap[16..24].try_into().expect("8 bytes")) as usize;
@@ -113,7 +126,7 @@ where
     let mut out = BufWriter::with_capacity(1 << 20, file);
     let mut header = [0u8; VECTORS_HEADER_LEN];
     header[..8].copy_from_slice(VECTORS_MAGIC);
-    header[8..12].copy_from_slice(&1u32.to_le_bytes());
+    header[8..12].copy_from_slice(&VECTORS_VERSION.to_le_bytes());
     header[12..16].copy_from_slice(&(dim as u32).to_le_bytes());
     header[16..24].copy_from_slice(&(count as u64).to_le_bytes());
     out.write_all(&header).map_err(|e| Error::io(path, e))?;
@@ -262,10 +275,13 @@ mod tests {
         let crc = write_vectors_file(&path, 2, 1, data.iter().map(|v| v.as_slice())).unwrap();
         assert!(MappedVectors::open(&path, 3, 1, None).is_err());
         assert!(MappedVectors::open(&path, 2, 1, Some(crc ^ 1)).is_err());
-        let mut bytes = std::fs::read(&path).unwrap();
-        bytes[0] = b'X';
-        std::fs::write(&path, &bytes).unwrap();
-        assert!(MappedVectors::open(&path, 2, 1, None).is_err());
+        let good = std::fs::read(&path).unwrap();
+        for (offset, why) in [(0, "magic"), (8, "version"), (40, "reserved")] {
+            let mut bytes = good.clone();
+            bytes[offset] ^= 0x5A;
+            std::fs::write(&path, &bytes).unwrap();
+            assert!(MappedVectors::open(&path, 2, 1, None).is_err(), "{why}");
+        }
         assert!(write_vectors_file(&path, 2, 2, data.iter().map(|v| v.as_slice())).is_err());
     }
 }
