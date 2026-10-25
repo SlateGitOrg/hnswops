@@ -38,6 +38,10 @@ debug = false
 lto = "thin"
 codegen-units = 4
 
+# Tests build 10k-point indexes; unoptimized code makes them needlessly slow.
+[profile.dev]
+opt-level = 1
+
 [profile.test]
 opt-level = 1
 

@@ -280,6 +280,19 @@ impl Hnsw {
         seen
     }
 
+    /// Re-link live nodes that the entry point cannot reach on some layer and
+    /// return how many links were added. Vacuum runs this automatically.
+    ///
+    /// Even without deletions, the neighbor-selection heuristic occasionally
+    /// prunes the last in-edge of a node while shrinking a full adjacency list
+    /// (hnswlib and the original paper share this property). Such a node can
+    /// never be returned by a search; [`HealthReport::unreachable_l0`] counts
+    /// them and this repairs them without a full vacuum. Cost: one BFS per
+    /// layer plus one `ef_construction` search per orphan.
+    pub fn repair_connectivity(&mut self) -> usize {
+        self.ensure_connectivity()
+    }
+
     /// Re-link live nodes that the entry point cannot reach. Returns how many
     /// were reconnected. Each orphan gets fresh out-edges from a search, and an
     /// in-edge from the nearest reachable node with spare capacity (or, if all
@@ -516,7 +529,7 @@ mod tests {
             return; // entry cannot be orphaned; nothing to test for this seed
         }
         assert_eq!(idx.health().unreachable_l0, 1);
-        let fixed = idx.ensure_connectivity();
+        let fixed = idx.repair_connectivity();
         assert!(fixed >= 1);
         assert_eq!(idx.health().unreachable_l0, 0);
     }

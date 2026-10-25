@@ -71,6 +71,17 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
         h.mean_degree_l0
     );
 
+    if h.unreachable_l0 > 0 {
+        let fixed = index.repair_connectivity();
+        println!(
+            "health: {} node(s) unreachable on layer 0 after build (heuristic pruned their last in-edge); repair_connectivity re-linked {fixed} -> unreachable={}",
+            h.unreachable_l0,
+            index.health().unreachable_l0
+        );
+    } else {
+        println!("health: every live node reachable from the entry point on layer 0");
+    }
+
     section("3. recall@10 vs ground truth (held-out queries)");
     for ef in [10, 16, 32, 64, 128] {
         let t = Instant::now();
