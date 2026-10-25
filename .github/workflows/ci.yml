@@ -1,0 +1,32 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+      # SIFT10K is optional for `make check`; cache it so the recall test runs.
+      - uses: actions/cache@v4
+        with:
+          path: data/siftsmall
+          key: siftsmall-b8f1e59b
+      - name: Fetch SIFT10K (best effort; the test skips if absent)
+        run: ./scripts/fetch-sift.sh data || echo "SIFT10K unavailable; sift test will skip"
+      - name: make check (fmt, clippy -D warnings, rustdoc, tests + coverage >= 80%)
+        run: make check
+      - name: make demo
+        run: make demo
