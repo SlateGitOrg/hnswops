@@ -284,7 +284,11 @@ impl RecallMonitor {
         };
         if next == RecallStatus::Degraded && st.status != RecallStatus::Degraded {
             st.alerts += 1;
-            tracing::warn!(mean_recall = mean, target = self.config.target_recall, "recall degraded");
+            tracing::warn!(
+                mean_recall = mean,
+                target = self.config.target_recall,
+                "recall degraded"
+            );
         } else if next == RecallStatus::Healthy && st.status == RecallStatus::Degraded {
             tracing::info!(mean_recall = mean, "recall recovered");
         }
@@ -364,12 +368,14 @@ fn score_sample(index: &Hnsw, s: &PendingSample, generation: u64) -> Result<Opti
     } else {
         s.served.clone()
     };
-    Ok(distance_aware_recall(&served, &exact, s.k).map(|recall| RecallSample {
-        recall,
-        ef: s.ef,
-        strategy: s.strategy,
-        replayed,
-    }))
+    Ok(
+        distance_aware_recall(&served, &exact, s.k).map(|recall| RecallSample {
+            recall,
+            ef: s.ef,
+            strategy: s.strategy,
+            replayed,
+        }),
+    )
 }
 
 /// Bounds and step sizes for [`MonitoredIndex::autotune`].
@@ -506,13 +512,22 @@ impl MonitoredIndex {
         idx.set_ef_search(next).ok()?;
         drop(idx);
         self.monitor.reset_window();
-        tracing::info!(from = current, to = next, mean = report.mean_recall, "efSearch autotuned");
+        tracing::info!(
+            from = current,
+            to = next,
+            mean = report.mean_recall,
+            "efSearch autotuned"
+        );
         Some(next)
     }
 
     /// Spawn a background thread that evaluates pending samples every
     /// `interval`. The worker stops when the returned handle is dropped.
-    pub fn spawn_shadow_worker(self: &Arc<Self>, interval: Duration, budget: usize) -> ShadowWorker {
+    pub fn spawn_shadow_worker(
+        self: &Arc<Self>,
+        interval: Duration,
+        budget: usize,
+    ) -> ShadowWorker {
         let stop = Arc::new(AtomicBool::new(false));
         let this = Arc::clone(self);
         let flag = Arc::clone(&stop);
@@ -600,10 +615,22 @@ mod tests {
     fn config_validation() {
         MonitorConfig::default().validate().unwrap();
         let bad = [
-            MonitorConfig { sample_rate: 1.5, ..cfg(0.1) },
-            MonitorConfig { recover_margin: 0.9, ..cfg(0.1) },
-            MonitorConfig { min_samples: 100, ..cfg(0.1) },
-            MonitorConfig { max_pending: 0, ..cfg(0.1) },
+            MonitorConfig {
+                sample_rate: 1.5,
+                ..cfg(0.1)
+            },
+            MonitorConfig {
+                recover_margin: 0.9,
+                ..cfg(0.1)
+            },
+            MonitorConfig {
+                min_samples: 100,
+                ..cfg(0.1)
+            },
+            MonitorConfig {
+                max_pending: 0,
+                ..cfg(0.1)
+            },
         ];
         for c in bad {
             assert!(RecallMonitor::new(c).is_err());
@@ -647,8 +674,14 @@ mod tests {
         let h = |key, distance| Hit { key, distance };
         let exact = [h(1, 1.0), h(2, 2.0), h(3, 2.0)];
         // Key 4 is a different point at the same distance as the k-th: not a miss.
-        assert_eq!(distance_aware_recall(&[h(1, 1.0), h(2, 2.0), h(4, 2.0)], &exact, 3), Some(1.0));
-        assert_eq!(distance_aware_recall(&[h(1, 1.0), h(5, 9.0)], &exact, 3), Some(1.0 / 3.0));
+        assert_eq!(
+            distance_aware_recall(&[h(1, 1.0), h(2, 2.0), h(4, 2.0)], &exact, 3),
+            Some(1.0)
+        );
+        assert_eq!(
+            distance_aware_recall(&[h(1, 1.0), h(5, 9.0)], &exact, 3),
+            Some(1.0 / 3.0)
+        );
         assert_eq!(distance_aware_recall(&[], &[], 3), None);
     }
 
@@ -682,7 +715,10 @@ mod tests {
     fn stale_samples_are_replayed_after_writes() {
         let mi = MonitoredIndex::new(index(300), cfg(1.0)).unwrap();
         let q = mi.with_index(|i| i.vector(3).unwrap().to_vec());
-        let filter = Filter::KeyRange { start: 0, end: 1000 };
+        let filter = Filter::KeyRange {
+            start: 0,
+            end: 1000,
+        };
         let served = mi.search(&q, SearchParams::top(5).filter(&filter)).unwrap();
         assert_eq!(served.hits[0].key, 3);
         // Delete the top hit before the shadow runs: replay must not count it.

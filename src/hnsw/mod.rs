@@ -4,7 +4,7 @@
 //! neighbor search using Hierarchical Navigable Small World graphs* (TPAMI 2018):
 //! Algorithm 1 (insert), Algorithm 2 (search layer), Algorithm 4 (neighbor
 //! selection heuristic) and Algorithm 5 (k-NN search). Deletion, repair and
-//! compaction live in [`maintenance`]; filtered search in [`filter`].
+//! compaction live in `maintenance.rs`; filtered search in `filter.rs`.
 
 mod filter;
 mod maintenance;
@@ -549,7 +549,8 @@ impl Hnsw {
                     dist: self.dist_to(q, n),
                     id: n,
                 };
-                let bound_ok = results.len() < ef || results.peek().is_some_and(|w| s.dist < w.dist);
+                let bound_ok =
+                    results.len() < ef || results.peek().is_some_and(|w| s.dist < w.dist);
                 if bound_ok {
                     candidates.push(Reverse(s));
                     if accept(n) {
@@ -600,9 +601,7 @@ impl Hnsw {
             if kept.len() >= m {
                 break;
             }
-            let diverse = kept
-                .iter()
-                .all(|k| self.dist_between(c.id, k.id) >= c.dist);
+            let diverse = kept.iter().all(|k| self.dist_between(c.id, k.id) >= c.dist);
             if diverse {
                 kept.push(c);
             }
@@ -700,7 +699,10 @@ pub(crate) mod tests {
         let mut idx = grid_index(4, 4);
         assert!(matches!(
             idx.insert(1, &[1.0]),
-            Err(Error::DimensionMismatch { expected: 2, got: 1 })
+            Err(Error::DimensionMismatch {
+                expected: 2,
+                got: 1
+            })
         ));
         assert!(idx.insert(9, &[f32::INFINITY, 0.0]).is_err());
         assert!(idx.search(&[1.0, 2.0, 3.0], 1).is_err());
@@ -748,7 +750,9 @@ pub(crate) mod tests {
     #[test]
     fn search_stats_report_strategy_and_work() {
         let idx = grid_index(100, 8);
-        let r = idx.search_with(&[1.0, 1.0], SearchParams::top(5).ef(10)).unwrap();
+        let r = idx
+            .search_with(&[1.0, 1.0], SearchParams::top(5).ef(10))
+            .unwrap();
         assert_eq!(r.stats.strategy, Strategy::Graph);
         assert_eq!(r.stats.ef_used, 10);
         assert!(r.stats.distance_evals > 0 && r.stats.distance_evals < 100);

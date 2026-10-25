@@ -91,7 +91,7 @@ fn read_rows(path: &Path) -> Result<(usize, Vec<[u8; 4]>, usize)> {
     if bytes.len() < 4 {
         return Err(Error::corrupt(path, "file too short"));
     }
-    let dim = i32::from_le_bytes(bytes[..4].try_into().expect("4")) ;
+    let dim = i32::from_le_bytes(bytes[..4].try_into().expect("4"));
     if dim <= 0 {
         return Err(Error::corrupt(path, format!("bad dimension {dim}")));
     }
@@ -100,7 +100,10 @@ fn read_rows(path: &Path) -> Result<(usize, Vec<[u8; 4]>, usize)> {
     if bytes.len() % row != 0 {
         return Err(Error::corrupt(
             path,
-            format!("{} bytes is not a multiple of the {row}-byte row", bytes.len()),
+            format!(
+                "{} bytes is not a multiple of the {row}-byte row",
+                bytes.len()
+            ),
         ));
     }
     let rows = bytes.len() / row;
@@ -144,7 +147,8 @@ pub fn write_fvecs(path: &Path, set: &VecSet) -> Result<()> {
         w.write_all(&(set.dim as i32).to_le_bytes())
             .map_err(|e| Error::io(path, e))?;
         for x in row {
-            w.write_all(&x.to_le_bytes()).map_err(|e| Error::io(path, e))?;
+            w.write_all(&x.to_le_bytes())
+                .map_err(|e| Error::io(path, e))?;
         }
     }
     w.flush().map_err(|e| Error::io(path, e))
@@ -278,7 +282,10 @@ pub fn load_dataset(dir: &Path, spec: &DatasetSpec) -> Result<Dataset> {
     let queries = read_fvecs(&dir.join(spec.query.name))?;
     let groundtruth = read_ivecs(&dir.join(spec.groundtruth.name))?;
     if base.dim() != queries.dim() || groundtruth.len() != queries.len() {
-        return Err(Error::corrupt(dir, "base/query/groundtruth shapes disagree"));
+        return Err(Error::corrupt(
+            dir,
+            "base/query/groundtruth shapes disagree",
+        ));
     }
     Ok(Dataset {
         base,
@@ -324,11 +331,22 @@ impl Default for FixtureSpec {
 /// `query.fvecs`, `groundtruth.ivecs`) with exact L2 ground truth.
 /// Queries are held out: drawn from the same mixture but never inserted.
 pub fn write_synthetic_fixture(dir: &Path, spec: &FixtureSpec) -> Result<Dataset> {
-    let all = gaussian_mixture(spec.n + spec.queries, spec.dim, spec.clusters, spec.spread, spec.seed);
+    let all = gaussian_mixture(
+        spec.n + spec.queries,
+        spec.dim,
+        spec.clusters,
+        spec.spread,
+        spec.seed,
+    );
     let (base, queries) = all.split_at(spec.n);
     let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
-    let groundtruth =
-        crate::brute::exact_knn(&base, &queries, spec.k, crate::distance::Metric::L2, threads)?;
+    let groundtruth = crate::brute::exact_knn(
+        &base,
+        &queries,
+        spec.k,
+        crate::distance::Metric::L2,
+        threads,
+    )?;
     fs::create_dir_all(dir).map_err(|e| Error::io(dir, e))?;
     write_fvecs(&dir.join(FIXTURE.base.name), &base)?;
     write_fvecs(&dir.join(FIXTURE.query.name), &queries)?;
@@ -347,7 +365,11 @@ pub fn write_synthetic_fixture(dir: &Path, spec: &FixtureSpec) -> Result<Dataset
 pub fn gaussian_mixture(n: usize, dim: usize, clusters: usize, spread: f32, seed: u64) -> VecSet {
     let mut rng = SplitMix64::new(seed);
     let centers: Vec<Vec<f32>> = (0..clusters.max(1))
-        .map(|_| (0..dim).map(|_| rng.next_gaussian() as f32 * 10.0).collect())
+        .map(|_| {
+            (0..dim)
+                .map(|_| rng.next_gaussian() as f32 * 10.0)
+                .collect()
+        })
         .collect();
     let mut data = Vec::with_capacity(n * dim);
     for _ in 0..n {
@@ -414,12 +436,23 @@ mod tests {
     #[test]
     fn unpinned_dataset_loads_and_validates_shapes() {
         let dir = tempfile::tempdir().unwrap();
-        write_fvecs(&dir.path().join("base.fvecs"), &gaussian_mixture(10, 3, 2, 1.0, 1)).unwrap();
-        write_fvecs(&dir.path().join("query.fvecs"), &gaussian_mixture(2, 3, 2, 1.0, 2)).unwrap();
+        write_fvecs(
+            &dir.path().join("base.fvecs"),
+            &gaussian_mixture(10, 3, 2, 1.0, 1),
+        )
+        .unwrap();
+        write_fvecs(
+            &dir.path().join("query.fvecs"),
+            &gaussian_mixture(2, 3, 2, 1.0, 2),
+        )
+        .unwrap();
         write_ivecs(&dir.path().join("groundtruth.ivecs"), &[vec![0], vec![1]]).unwrap();
         let ds = load_dataset(dir.path(), &UNPINNED).unwrap();
         assert_eq!(ds.base.len(), 10);
-        assert!(load_dataset(dir.path(), &FIXTURE).is_err(), "pinned checksums differ");
+        assert!(
+            load_dataset(dir.path(), &FIXTURE).is_err(),
+            "pinned checksums differ"
+        );
         write_ivecs(&dir.path().join("groundtruth.ivecs"), &[vec![0]]).unwrap();
         assert!(load_dataset(dir.path(), &UNPINNED).is_err());
     }
@@ -450,7 +483,13 @@ mod tests {
 
     #[test]
     fn mixture_is_deterministic() {
-        assert_eq!(gaussian_mixture(5, 4, 2, 0.5, 3), gaussian_mixture(5, 4, 2, 0.5, 3));
-        assert_ne!(gaussian_mixture(5, 4, 2, 0.5, 3), gaussian_mixture(5, 4, 2, 0.5, 4));
+        assert_eq!(
+            gaussian_mixture(5, 4, 2, 0.5, 3),
+            gaussian_mixture(5, 4, 2, 0.5, 3)
+        );
+        assert_ne!(
+            gaussian_mixture(5, 4, 2, 0.5, 3),
+            gaussian_mixture(5, 4, 2, 0.5, 4)
+        );
     }
 }

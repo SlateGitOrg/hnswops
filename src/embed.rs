@@ -268,7 +268,10 @@ mod tests {
         let c = InMemoryCorpus::from_docs(synthetic_corpus(10, 3, 1));
         assert_eq!(c.len(), 10);
         let first = c.scan(None, 4);
-        assert_eq!(first.iter().map(|d| d.key).collect::<Vec<_>>(), vec![0, 1, 2, 3]);
+        assert_eq!(
+            first.iter().map(|d| d.key).collect::<Vec<_>>(),
+            vec![0, 1, 2, 3]
+        );
         let next = c.scan(Some(3), 100);
         assert_eq!(next.len(), 6);
         assert!(c.delete(5));

@@ -282,7 +282,10 @@ mod tests {
         let removed = store.prune(1).unwrap();
         assert_eq!(removed, vec![2]);
         assert_eq!(store.versions().unwrap(), vec![1, 3]);
-        assert!(matches!(store.load(2, LoadOptions::default()), Err(Error::SnapshotNotFound(_))));
+        assert!(matches!(
+            store.load(2, LoadOptions::default()),
+            Err(Error::SnapshotNotFound(_))
+        ));
         assert!(store.verify(2).is_err());
         assert!(store.info(2).is_err());
         assert!(store.rollback(9).is_err());

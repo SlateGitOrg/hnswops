@@ -230,8 +230,7 @@ pub fn render_svg(r: &BenchReport) -> String {
         .iter()
         .map(|p| p.recall)
         .fold(1.0, f64::min)
-        .min(0.9)
-        .max(0.0);
+        .clamp(0.0, 0.9);
     let rmin = (rmin * 20.0).floor() / 20.0;
     let qmax = r.sweep.iter().map(|p| p.qps).fold(1.0, f64::max);
     let qmin = r
@@ -241,7 +240,10 @@ pub fn render_svg(r: &BenchReport) -> String {
         .fold(qmax, f64::min)
         .min(r.brute_force_qps)
         .max(1.0);
-    let (lo, hi) = (qmin.log10().floor(), qmax.log10().ceil().max(qmin.log10().floor() + 1.0));
+    let (lo, hi) = (
+        qmin.log10().floor(),
+        qmax.log10().ceil().max(qmin.log10().floor() + 1.0),
+    );
     let x = |rec: f64| left + (rec - rmin) / (1.0 - rmin).max(1e-9) * pw;
     let y = |q: f64| top + ph - (q.max(1.0).log10() - lo) / (hi - lo) * ph;
     let mut s = String::new();
@@ -346,7 +348,15 @@ mod tests {
     fn sweep_produces_monotone_work_and_high_recall() {
         let ds = small_dataset();
         let cfg = HnswConfig::new(12).with_m(8).with_ef_construction(64);
-        let r = run("tiny", &ds, cfg, 10, &[10, 50, 200], Duration::from_millis(5)).unwrap();
+        let r = run(
+            "tiny",
+            &ds,
+            cfg,
+            10,
+            &[10, 50, 200],
+            Duration::from_millis(5),
+        )
+        .unwrap();
         assert_eq!(r.sweep.len(), 3);
         assert!(r.sweep[0].mean_distance_evals < r.sweep[2].mean_distance_evals);
         assert!(r.sweep[2].recall > 0.97, "recall {}", r.sweep[2].recall);

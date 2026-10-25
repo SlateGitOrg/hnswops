@@ -39,7 +39,7 @@ impl HnswConfig {
             m: 16,
             ef_construction: 200,
             ef_search: 64,
-            seed: 0x5EED_0F_4A55,
+            seed: 0x005E_ED0F_4A55,
             filter_brute_force_below: 0.05,
         }
     }

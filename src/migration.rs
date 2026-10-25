@@ -350,7 +350,11 @@ impl Migration {
 
     /// Plan, embed and apply one batch (single-threaded convenience).
     /// Returns `None` once the backfill is complete.
-    pub fn backfill_step(&mut self, corpus: &dyn Corpus, limit: usize) -> Result<Option<ApplyReport>> {
+    pub fn backfill_step(
+        &mut self,
+        corpus: &dyn Corpus,
+        limit: usize,
+    ) -> Result<Option<ApplyReport>> {
         let batch = self.plan_backfill(corpus, limit)?;
         if batch.is_empty() {
             return Ok(None);
@@ -398,7 +402,11 @@ impl Migration {
             overlap_sum += ann.iter().filter(|x| old.contains(x)).count() as f64 / denom as f64;
         }
         let n = probes.len().max(1) as f64;
-        let new_index_recall = if probes.is_empty() { 0.0 } else { recall_sum / n };
+        let new_index_recall = if probes.is_empty() {
+            0.0
+        } else {
+            recall_sum / n
+        };
         let mut failures = Vec::new();
         if self.phase == Phase::DualWrite {
             failures.push("backfill has not completed".to_string());
@@ -407,7 +415,9 @@ impl Migration {
             failures.push(format!("{missing} corpus keys missing from the new index"));
         }
         if extra > 0 {
-            failures.push(format!("{extra} keys in the new index are not in the corpus"));
+            failures.push(format!(
+                "{extra} keys in the new index are not in the corpus"
+            ));
         }
         if probes.is_empty() {
             failures.push("no probe queries supplied".to_string());
@@ -423,7 +433,11 @@ impl Migration {
             missing,
             extra,
             new_index_recall,
-            old_new_overlap: if probes.is_empty() { 0.0 } else { overlap_sum / n },
+            old_new_overlap: if probes.is_empty() {
+                0.0
+            } else {
+                overlap_sum / n
+            },
             probes: probes.len(),
             min_recall,
             passed: failures.is_empty(),
@@ -459,7 +473,10 @@ impl Migration {
             )));
         }
         self.phase = Phase::Backfilled;
-        tracing::warn!(to = self.old_embedder.name(), "reads rolled back to old index");
+        tracing::warn!(
+            to = self.old_embedder.name(),
+            "reads rolled back to old index"
+        );
         Ok(())
     }
 
@@ -534,7 +551,8 @@ mod tests {
         let corpus = InMemoryCorpus::from_docs(synthetic_corpus(n, 6, 3));
         let mut old = Hnsw::new(cfg(32)).unwrap();
         for d in corpus.scan(None, usize::MAX) {
-            old.insert_with_tags(d.key, &v1.embed(&d.text).unwrap(), d.tags).unwrap();
+            old.insert_with_tags(d.key, &v1.embed(&d.text).unwrap(), d.tags)
+                .unwrap();
         }
         let m = Migration::start(old, v1, cfg(48), v2).unwrap();
         (corpus, m)
@@ -608,7 +626,13 @@ mod tests {
         corpus.delete(4);
         let embedded = batch.embed(m.new_embedder().as_ref()).unwrap();
         let r = m.apply_backfill(embedded).unwrap();
-        assert_eq!(r, ApplyReport { applied: 8, skipped: 2 });
+        assert_eq!(
+            r,
+            ApplyReport {
+                applied: 8,
+                skipped: 2
+            }
+        );
         assert_eq!(m.stats().skipped_stale, 2);
         // Stored vectors are cosine-normalized, so compare the prepared form.
         let want = Metric::Cosine
@@ -638,8 +662,12 @@ mod tests {
     fn guards_reject_misuse() {
         let (v1, v2) = models();
         let old = Hnsw::new(cfg(32)).unwrap();
-        assert!(Migration::start(Hnsw::new(cfg(16)).unwrap(), v1.clone(), cfg(48), v2.clone()).is_err());
-        assert!(Migration::start(Hnsw::new(cfg(32)).unwrap(), v1.clone(), cfg(16), v2.clone()).is_err());
+        assert!(
+            Migration::start(Hnsw::new(cfg(16)).unwrap(), v1.clone(), cfg(48), v2.clone()).is_err()
+        );
+        assert!(
+            Migration::start(Hnsw::new(cfg(32)).unwrap(), v1.clone(), cfg(16), v2.clone()).is_err()
+        );
         let m = Migration::start(old, v1, cfg(48), v2).unwrap();
         assert!(Migration::finalize(m).is_err());
         let (corpus, mut m) = setup(20);
@@ -657,7 +685,13 @@ mod tests {
         assert_eq!(r.extra, 1);
         assert!(!r.passed);
         assert!(m.cutover(&r).is_err());
-        assert!(m.upsert(&Document { key: 1, text: "   ".into(), tags: 0 }).is_err());
+        assert!(m
+            .upsert(&Document {
+                key: 1,
+                text: "   ".into(),
+                tags: 0
+            })
+            .is_err());
         let old = m.abort();
         assert_eq!(old.len(), 21);
     }

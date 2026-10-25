@@ -91,7 +91,9 @@ pub fn save(index: &Hnsw, dir: &Path) -> Result<Manifest> {
     let vpath = dir.join(VECTORS_FILE);
     let n = index.nodes.len();
     let vcrc = write_vectors_file(&vpath, index.config.dim, n, index.vectors.iter())?;
-    let vbytes = fs::metadata(&vpath).map_err(|e| Error::io(&vpath, e))?.len();
+    let vbytes = fs::metadata(&vpath)
+        .map_err(|e| Error::io(&vpath, e))?
+        .len();
 
     let gpath = dir.join(GRAPH_FILE);
     let graph = encode_graph(&index.nodes);

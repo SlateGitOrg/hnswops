@@ -12,7 +12,7 @@
 //! * [`monitor`] — online recall monitoring via sampled brute-force shadow queries.
 //! * [`migration`] — zero-downtime re-embedding (dual-write, backfill,
 //!   verification gates, atomic cutover, rollback).
-//! * [`dataset`] / [`bench`] — `.fvecs`/`.ivecs` I/O, checksummed benchmark
+//! * [`dataset`] / [`mod@bench`] — `.fvecs`/`.ivecs` I/O, checksummed benchmark
 //!   data, recall/QPS sweeps.
 //!
 //! ```
@@ -48,7 +48,10 @@ pub mod visited;
 pub use config::HnswConfig;
 pub use distance::Metric;
 pub use error::{Error, Result};
-pub use hnsw::{Filter, FilterPlan, HealthReport, Hit, Hnsw, SearchParams, SearchResult, SearchStats, Strategy, VacuumReport};
+pub use hnsw::{
+    Filter, FilterPlan, HealthReport, Hit, Hnsw, SearchParams, SearchResult, SearchStats, Strategy,
+    VacuumReport,
+};
 pub use migration::{Migration, Phase};
 pub use monitor::{MonitorConfig, MonitoredIndex, RecallReport, RecallStatus};
 pub use snapshot::SnapshotStore;

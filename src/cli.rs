@@ -71,7 +71,7 @@ struct IndexArgs {
     #[arg(long, default_value = "l2")]
     metric: Metric,
     /// Level-assignment seed.
-    #[arg(long, default_value_t = 0x5EED_0F_4A55)]
+    #[arg(long, default_value_t = 0x005E_ED0F_4A55)]
     seed: u64,
 }
 
@@ -171,7 +171,11 @@ enum Command {
         #[arg(long, default_value_t = 10)]
         k: usize,
         /// Comma-separated efSearch values.
-        #[arg(long, value_delimiter = ',', default_value = "10,16,24,32,48,64,96,128,256")]
+        #[arg(
+            long,
+            value_delimiter = ',',
+            default_value = "10,16,24,32,48,64,96,128,256"
+        )]
         efs: Vec<usize>,
         /// Minimum measuring time per point, in milliseconds.
         #[arg(long, default_value_t = 500)]
@@ -340,7 +344,8 @@ pub fn run(cli: Cli) -> Result<()> {
         }
         Command::Eval { data, store, k, ef } => {
             let ds = data.load()?;
-            let (version, idx) = SnapshotStore::open(&store)?.load_current(LoadOptions::default())?;
+            let (version, idx) =
+                SnapshotStore::open(&store)?.load_current(LoadOptions::default())?;
             let ef = ef.unwrap_or(idx.config().ef_search);
             let recall = mean_recall(&idx, &ds, k, ef)?;
             print_json(&serde_json::json!({
@@ -425,7 +430,11 @@ pub fn run(cli: Cli) -> Result<()> {
                 SnapshotAction::List => {
                     let current = store.current()?;
                     for info in store.list()? {
-                        let mark = if Some(info.version) == current { "*" } else { " " };
+                        let mark = if Some(info.version) == current {
+                            "*"
+                        } else {
+                            " "
+                        };
                         println!(
                             "{mark} v{:06}  live={:<8} bytes={:<10} parent={:<8} label={}",
                             info.version,
@@ -458,7 +467,8 @@ pub fn run(cli: Cli) -> Result<()> {
             }
         }
         Command::Health { store } => {
-            let (version, idx) = SnapshotStore::open(&store)?.load_current(LoadOptions::default())?;
+            let (version, idx) =
+                SnapshotStore::open(&store)?.load_current(LoadOptions::default())?;
             print_json(&serde_json::json!({ "version": version, "health": idx.health() }))
         }
         Command::Demo { fixtures, workdir } => crate::demo::run(&fixtures, &workdir),
@@ -481,7 +491,15 @@ mod tests {
     fn cli_parses() {
         use clap::CommandFactory;
         Cli::command().debug_assert();
-        let c = Cli::try_parse_from(["hnswops", "bench", "--efs", "8,16", "--dataset", "siftsmall"]).unwrap();
+        let c = Cli::try_parse_from([
+            "hnswops",
+            "bench",
+            "--efs",
+            "8,16",
+            "--dataset",
+            "siftsmall",
+        ])
+        .unwrap();
         assert!(matches!(c.command, Command::Bench { ref efs, .. } if efs == &vec![8, 16]));
     }
 }

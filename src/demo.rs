@@ -8,13 +8,15 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
 use hnswops::dataset::{self, Dataset};
-use hnswops::embed::{synthetic_corpus, synthetic_query, Corpus, Document, Embedder, HashingEmbedder, InMemoryCorpus};
+use hnswops::embed::{
+    synthetic_corpus, synthetic_query, Corpus, Document, Embedder, HashingEmbedder, InMemoryCorpus,
+};
 use hnswops::migration::backfill_concurrently;
 use hnswops::monitor::AutotunePolicy;
 use hnswops::persist::LoadOptions;
 use hnswops::{
-    Error, Filter, Hnsw, HnswConfig, Metric, Migration, MonitorConfig, MonitoredIndex, Result, SearchParams,
-    SnapshotStore,
+    Error, Filter, Hnsw, HnswConfig, Metric, Migration, MonitorConfig, MonitoredIndex, Result,
+    SearchParams, SnapshotStore,
 };
 
 use crate::cli::{build_tagged, mean_recall};
@@ -33,7 +35,11 @@ fn live_recall(index: &Hnsw, ds: &Dataset, k: usize, ef: usize) -> Result<f64> {
             .iter()
             .map(|h| h.key)
             .collect();
-        let truth: Vec<u64> = index.exact_search(q, k, None)?.iter().map(|h| h.key).collect();
+        let truth: Vec<u64> = index
+            .exact_search(q, k, None)?
+            .iter()
+            .map(|h| h.key)
+            .collect();
         total += hnswops::brute::recall_at_k(&got, &truth, k);
     }
     Ok(total / ds.queries.len().max(1) as f64)
@@ -58,7 +64,9 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
     );
 
     section("2. build (M=16, efConstruction=200)");
-    let config = HnswConfig::new(ds.base.dim()).with_m(16).with_ef_construction(200);
+    let config = HnswConfig::new(ds.base.dim())
+        .with_m(16)
+        .with_ef_construction(200);
     let t = Instant::now();
     let mut index = build_tagged(&ds, config)?;
     let h = index.health();
@@ -95,12 +103,19 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
     for (label, filter) in [
         ("tenant 3 (~12.5%)", Filter::TagsAny(1 << 3)),
         ("flagged (~2%)", Filter::TagsAny(1 << 8)),
-        ("tenant 3 AND key<5000", Filter::parse("tags_any=0x8,key=0..5000")?),
+        (
+            "tenant 3 AND key<5000",
+            Filter::parse("tags_any=0x8,key=0..5000")?,
+        ),
         ("NOT flagged (~98%)", Filter::parse("!tags_any=0x100")?),
     ] {
         let plan = index.plan_filter(&filter, index.config().ef_search);
         let r = index.search_with(q, SearchParams::top(k).filter(&filter))?;
-        let exact: Vec<u64> = index.exact_search(q, k, Some(&filter))?.iter().map(|h| h.key).collect();
+        let exact: Vec<u64> = index
+            .exact_search(q, k, Some(&filter))?
+            .iter()
+            .map(|h| h.key)
+            .collect();
         let got: Vec<u64> = r.hits.iter().map(|h| h.key).collect();
         println!(
             "{label:<24} selectivity≈{:.3} est.cost graph={:<6.0} scan={:<6.0} -> {:?} ef_used={} dist_evals={} recall={:.2}",
@@ -117,7 +132,9 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
     section("5. delete 30% (tombstones + local repair), then vacuum");
     let before = live_recall(&index, &ds, k, 64)?;
     let t = Instant::now();
-    let deleted: Vec<u64> = (0..ds.base.len() as u64).filter(|key| key % 10 < 3).collect();
+    let deleted: Vec<u64> = (0..ds.base.len() as u64)
+        .filter(|key| key % 10 < 3)
+        .collect();
     for &key in &deleted {
         index.delete(key)?;
     }
@@ -156,7 +173,11 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
         live_recall(&index, &ds, k, 64)?
     );
     for (i, &key) in deleted.iter().enumerate() {
-        index.insert_with_tags(key, ds.base.get(key as usize), crate::cli::fixture_tags(key))?;
+        index.insert_with_tags(
+            key,
+            ds.base.get(key as usize),
+            crate::cli::fixture_tags(key),
+        )?;
         if i + 1 == deleted.len() {
             println!(
                 "re-inserted the {} keys: live={} recall@10 vs original ground truth={:.4}",
@@ -175,7 +196,9 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
     }
     let v2 = store.commit(&index, "after-deletes")?;
     let t = Instant::now();
-    let (cur, loaded) = store.load_current(LoadOptions { verify_vectors: false })?;
+    let (cur, loaded) = store.load_current(LoadOptions {
+        verify_vectors: false,
+    })?;
     let load_ms = t.elapsed().as_secs_f64() * 1e3;
     let same = ds
         .queries
@@ -241,17 +264,30 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
     let v1_model: Arc<dyn Embedder> = Arc::new(HashingEmbedder::new("hash-v1", 64, 1, 1)?);
     let v2_model: Arc<dyn Embedder> = Arc::new(HashingEmbedder::new("hash-v2", 128, 2, 2)?);
     let corpus = InMemoryCorpus::from_docs(synthetic_corpus(4000, 12, 7));
-    let mut old = Hnsw::new(HnswConfig::new(64).with_metric(Metric::Cosine).with_m(12).with_ef_construction(100))?;
+    let mut old = Hnsw::new(
+        HnswConfig::new(64)
+            .with_metric(Metric::Cosine)
+            .with_m(12)
+            .with_ef_construction(100),
+    )?;
     for d in corpus.scan(None, usize::MAX) {
         old.insert_with_tags(d.key, &v1_model.embed(&d.text)?, d.tags)?;
     }
     let docs_store = SnapshotStore::open(workdir.join("docs-store"))?;
     let pre = docs_store.commit(&old, "pre-migration hash-v1")?;
-    println!("old index: {} docs, snapshot v{} labelled {:?}", old.len(), pre.version, pre.label);
+    println!(
+        "old index: {} docs, snapshot v{} labelled {:?}",
+        old.len(),
+        pre.version,
+        pre.label
+    );
     let migration = RwLock::new(Migration::start(
         old,
         Arc::clone(&v1_model),
-        HnswConfig::new(128).with_metric(Metric::Cosine).with_m(12).with_ef_construction(100),
+        HnswConfig::new(128)
+            .with_metric(Metric::Cosine)
+            .with_m(12)
+            .with_ef_construction(100),
         Arc::clone(&v2_model),
     )?);
     let reads = AtomicUsize::new(0);
@@ -278,24 +314,38 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
             for i in 0..200u64 {
                 let doc = Document {
                     key: 10_000 + i,
-                    text: format!("t{}w{} t{}w{} fresh write during migration", i % 12, i % 16, i % 12, (i + 3) % 16),
+                    text: format!(
+                        "t{}w{} t{}w{} fresh write during migration",
+                        i % 12,
+                        i % 16,
+                        i % 12,
+                        (i + 3) % 16
+                    ),
                     tags: 1,
                 };
-                m.write().map_err(|_| Error::Migration("lock poisoned".into()))?.upsert(&doc)?;
+                m.write()
+                    .map_err(|_| Error::Migration("lock poisoned".into()))?
+                    .upsert(&doc)?;
                 corpus_ref.upsert(doc);
                 if i % 4 == 0 {
-                    m.write().map_err(|_| Error::Migration("lock poisoned".into()))?.delete(i * 7)?;
+                    m.write()
+                        .map_err(|_| Error::Migration("lock poisoned".into()))?
+                        .delete(i * 7)?;
                     corpus_ref.delete(i * 7);
                 }
             }
             Ok(())
         });
         let batches = backfill_concurrently(&migration, &corpus, 128)?;
-        writer.join().map_err(|_| Error::Migration("writer panicked".into()))??;
+        writer
+            .join()
+            .map_err(|_| Error::Migration("writer panicked".into()))??;
         stop.store(true, Ordering::Release);
         Ok(batches)
     })?;
-    let mut m = migration.into_inner().map_err(|_| Error::Migration("lock poisoned".into()))?;
+    let mut m = migration
+        .into_inner()
+        .map_err(|_| Error::Migration("lock poisoned".into()))?;
     let st = m.stats().clone();
     println!(
         "backfill: {batches} batches in {:.2}s while serving {} reads ({} failed) and {} dual-writes/{} dual-deletes",
@@ -312,7 +362,9 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
         st.skipped_fresh,
         m.phase()
     );
-    let probes: Vec<String> = (0..48).map(|i| synthetic_query(i % 12, 1000 + i as u64)).collect();
+    let probes: Vec<String> = (0..48)
+        .map(|i| synthetic_query(i % 12, 1000 + i as u64))
+        .collect();
     let report = m.verify(&corpus, &probes, k, 0.95)?;
     println!(
         "verify: corpus={} new_live={} missing={} extra={} new-index recall@10={:.4} old/new top-10 overlap={:.2} passed={}",
@@ -330,7 +382,10 @@ pub fn run(fixtures: &Path, workdir: &Path) -> Result<()> {
     let after: Vec<u64> = m.search(&probe, 5)?.iter().map(|h| h.key).collect();
     println!("query {probe:?}: old model top-5 {before:?} -> new model top-5 {after:?}");
     m.rollback()?;
-    println!("rollback: reads back on {} (lossless; writes kept flowing to both)", m.read_embedder().name());
+    println!(
+        "rollback: reads back on {} (lossless; writes kept flowing to both)",
+        m.read_embedder().name()
+    );
     m.cutover(&report)?;
     let new_index = m.finalize()?;
     let post = docs_store.commit(&new_index, "post-migration hash-v2")?;

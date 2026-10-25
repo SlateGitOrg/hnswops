@@ -162,7 +162,10 @@ mod tests {
         assert!(Metric::Cosine.distance(&v, &v).abs() < 1e-6);
         assert!(Metric::Cosine.prepare(&[0.0, 0.0]).is_err());
         assert!(Metric::L2.prepare(&[f32::NAN]).is_err());
-        assert_eq!(Metric::InnerProduct.distance(&[1.0, 2.0], &[3.0, 4.0]), -11.0);
+        assert_eq!(
+            Metric::InnerProduct.distance(&[1.0, 2.0], &[3.0, 4.0]),
+            -11.0
+        );
     }
 
     #[test]

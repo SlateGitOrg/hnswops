@@ -11,7 +11,7 @@
 //!   compute distances only for matches. Exact, and cheap when matches are rare.
 //!
 //! The planner estimates selectivity from a deterministic strided sample of up
-//! to [`SELECTIVITY_SAMPLE`] nodes, prices both strategies in distance
+//! to 512 nodes, prices both strategies in distance
 //! evaluations and picks the cheaper one; below the configured
 //! `filter_brute_force_below` selectivity it always scans.
 
@@ -116,7 +116,7 @@ fn bad(clause: &str, why: &str) -> Error {
 
 impl Hnsw {
     /// Estimated fraction of live points matching `filter`, from a strided
-    /// sample of at most [`SELECTIVITY_SAMPLE`] live nodes. Deterministic.
+    /// sample of at most 512 live nodes. Deterministic.
     pub fn estimate_selectivity(&self, filter: &Filter) -> f64 {
         if self.live == 0 {
             return 0.0;
@@ -248,7 +248,16 @@ mod tests {
             Filter::parse("tags_any=1, !tags_all=2").unwrap(),
             Filter::And(v) if v.len() == 2
         ));
-        for bad in ["", "tags_any", "color=red", "key=5", "tags_any=zz", "key=a..2", "key=1..b", "tags_all=q"] {
+        for bad in [
+            "",
+            "tags_any",
+            "color=red",
+            "key=5",
+            "tags_any=zz",
+            "key=a..2",
+            "key=1..b",
+            "tags_all=q",
+        ] {
             assert!(Filter::parse(bad).is_err(), "{bad}");
         }
     }
@@ -261,15 +270,23 @@ mod tests {
         let sel = idx.estimate_selectivity(&common);
         assert!((0.4..0.6).contains(&sel), "selectivity {sel}");
         let q = [10.0, 10.0];
-        let r = idx.search_with(&q, SearchParams::top(10).filter(&common)).unwrap();
+        let r = idx
+            .search_with(&q, SearchParams::top(10).filter(&common))
+            .unwrap();
         assert_eq!(r.stats.strategy, Strategy::FilteredGraph);
         assert!(r.stats.ef_used >= 64);
         let exact = idx.exact_search(&q, 10, Some(&common)).unwrap();
-        let overlap = r.hits.iter().filter(|h| exact.iter().any(|e| e.key == h.key)).count();
+        let overlap = r
+            .hits
+            .iter()
+            .filter(|h| exact.iter().any(|e| e.key == h.key))
+            .count();
         assert!(overlap >= 9, "overlap {overlap}");
         assert!(r.hits.iter().all(|h| idx.tags(h.key).unwrap() & 1 != 0));
 
-        let r = idx.search_with(&q, SearchParams::top(10).filter(&rare)).unwrap();
+        let r = idx
+            .search_with(&q, SearchParams::top(10).filter(&rare))
+            .unwrap();
         assert_eq!(r.stats.strategy, Strategy::BruteForce);
         assert_eq!(r.hits, idx.exact_search(&q, 10, Some(&rare)).unwrap());
 
@@ -277,10 +294,16 @@ mod tests {
         assert!(plan.graph_cost < plan.scan_cost, "{plan:?}");
         // A filter matching nothing plans a scan over the full beam.
         let none = idx.plan_filter(&Filter::TagsAny(1 << 40), 64);
-        assert_eq!((none.strategy, none.widened_ef), (Strategy::BruteForce, 2000));
+        assert_eq!(
+            (none.strategy, none.widened_ef),
+            (Strategy::BruteForce, 2000)
+        );
         // On a tiny index the scan is cheaper even for common filters.
         let small = tagged_index(300);
-        assert_eq!(small.plan_filter(&common, 64).strategy, Strategy::BruteForce);
+        assert_eq!(
+            small.plan_filter(&common, 64).strategy,
+            Strategy::BruteForce
+        );
     }
 
     #[test]

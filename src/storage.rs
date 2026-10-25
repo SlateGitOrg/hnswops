@@ -210,7 +210,10 @@ impl VectorStore {
     pub fn get(&self, id: u32) -> &[f32] {
         let i = id as usize;
         if i < self.base_count {
-            let base = self.base.as_ref().expect("base present when base_count > 0");
+            let base = self
+                .base
+                .as_ref()
+                .expect("base present when base_count > 0");
             &base.as_f32()[i * self.dim..(i + 1) * self.dim]
         } else {
             let j = i - self.base_count;
@@ -264,7 +267,10 @@ mod tests {
         assert_eq!(store.get(5), &[9.0, 9.0, 9.0]);
         let c = store.compacted(&[5, 0]);
         assert_eq!(c.mapped_count(), 0);
-        assert_eq!(c.iter().collect::<Vec<_>>(), vec![&[9.0f32, 9.0, 9.0][..], &[0.0, -0.0, 0.5][..]]);
+        assert_eq!(
+            c.iter().collect::<Vec<_>>(),
+            vec![&[9.0f32, 9.0, 9.0][..], &[0.0, -0.0, 0.5][..]]
+        );
     }
 
     #[test]
