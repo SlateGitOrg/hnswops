@@ -1,7 +1,20 @@
 # hnswops
 
-An HNSW approximate-nearest-neighbor index written from scratch in Rust, plus
-the operational tooling that a vector-search service needs around the index:
+An HNSW approximate-nearest-neighbor index written from scratch in Rust, with
+the operational tooling a vector-search service needs around it: recall
+monitoring, versioned snapshots and zero-downtime re-embedding migration.
+
+[![CI](https://github.com/SlateGitOrg/hnswops/actions/workflows/ci.yml/badge.svg)](https://github.com/SlateGitOrg/hnswops/actions/workflows/ci.yml)
+
+## Why
+
+Most HNSW write-ups stop at "build the graph and query it". Running one is
+harder: deletes leave dangling edges, a corrupt file must not crash the
+process, recall drifts silently as data changes, and swapping the embedding
+model means rebuilding the index while it is serving traffic. hnswops covers
+that whole lifecycle in one readable codebase.
+
+## Features
 
 - **Index**: insert/upsert, delete with tombstones + local repair, vacuum,
   filtered search with a cost-based planner, configurable `M` /
@@ -18,10 +31,9 @@ the operational tooling that a vector-search service needs around the index:
   lossless rollback, including a change of vector dimension.
 
 It is meant for engineers who run or evaluate vector search and want to see
-the full lifecycle of an ANN index in one readable codebase: how it is built,
-how it degrades and how it is repaired, measured and migrated. It is a
-portfolio and learning project, not a production database (see
-[Limitations](#limitations)).
+how an ANN index is built, how it degrades, and how it is repaired, measured
+and migrated. It is a reference implementation, not a production database
+(see [Limitations](#limitations)).
 
 ## Architecture
 
@@ -66,7 +78,7 @@ flowchart LR
 formats, the argument for why the migration is race-free, and the cost of
 every operation.
 
-## Quickstart
+## Quick start
 
 Requires a stable Rust toolchain (1.82 or newer). `make check` also needs
 `cargo-llvm-cov` and the `llvm-tools` component.
@@ -230,6 +242,25 @@ Size: `make loc` counts 5,679 lines of non-test source under `src/`
 in `#[cfg(test)]` modules (`wc -l` of `src/` minus `make loc`) and 733 lines in
 `tests/` (`wc -l tests/*.rs`).
 
+## Testing
+
+`make check` runs formatting, clippy with `-D warnings`, rustdoc, doc examples
+and the whole suite (unit, property, integration, CLI) under coverage with an
+80% line gate. `make test` runs just the tests. The correctness gates above
+are the important ones: recall floors, model-based delete sequences,
+persistence corruption rejection and concurrent snapshot readers.
+
+## Project layout
+
+```text
+src/hnsw/     graph, search, delete/vacuum, filter planner
+src/          storage, persist, snapshot, monitor, embed, migration, CLI
+tests/        recall, property, snapshot and CLI tests
+fixtures/     committed synthetic dataset with exact ground truth
+bench/        committed benchmark results (json, md, svg)
+docs/         ARCHITECTURE.md
+```
+
 ## Design decisions
 
 Every ruling and what it costs if it turns out wrong is in
@@ -286,9 +317,6 @@ Every ruling and what it costs if it turns out wrong is in
 - **Vacuum loads all vectors into the heap** (it renumbers ids), so RSS grows
   until the index is snapshotted and reloaded.
 - **Little-endian hosts only** for the on-disk format.
-- **CI has never run.** `.github/workflows/ci.yml` mirrors `make check` and
-  `make demo`, but it will only execute once the repository is pushed, and
-  that has not happened.
 
 ## Roadmap
 
@@ -306,4 +334,4 @@ Every ruling and what it costs if it turns out wrong is in
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
