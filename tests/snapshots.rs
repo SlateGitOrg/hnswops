@@ -8,7 +8,8 @@ use hnswops::{Hnsw, HnswConfig, SnapshotStore};
 fn index(n: u64, offset: f32) -> Hnsw {
     let mut idx = Hnsw::new(HnswConfig::new(2).with_m(6).with_ef_construction(24)).unwrap();
     for i in 0..n {
-        idx.insert(i, &[(i % 17) as f32 + offset, (i / 17) as f32]).unwrap();
+        idx.insert(i, &[(i % 17) as f32 + offset, (i / 17) as f32])
+            .unwrap();
     }
     idx
 }
@@ -47,7 +48,11 @@ fn mapped_index_with_heap_tail_commits_and_rolls_back() {
     let dir = tempfile::tempdir().unwrap();
     let store = SnapshotStore::open(dir.path()).unwrap();
     store.commit(&index(100, 0.0), "base").unwrap();
-    let (_, mut loaded) = store.load_current(LoadOptions { verify_vectors: false }).unwrap();
+    let (_, mut loaded) = store
+        .load_current(LoadOptions {
+            verify_vectors: false,
+        })
+        .unwrap();
     assert_eq!(loaded.mapped_vectors(), 100);
     for i in 100..130u64 {
         loaded.insert(i, &[i as f32, -1.0]).unwrap();

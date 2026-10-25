@@ -30,7 +30,9 @@ fn build(points: &[(u64, [i8; 3])], deletes: &[usize]) -> Hnsw {
 }
 
 fn queries() -> Vec<[f32; 3]> {
-    (0..8).map(|i| [i as f32 * 4.0 - 16.0, (i * i) as f32 % 11.0, 2.0]).collect()
+    (0..8)
+        .map(|i| [i as f32 * 4.0 - 16.0, (i * i) as f32 % 11.0, 2.0])
+        .collect()
 }
 
 fn assert_same(a: &Hnsw, b: &Hnsw) {
@@ -123,10 +125,22 @@ fn unverified_load_skips_vector_checksum_but_still_validates_shape() {
     bytes[last] ^= 0x01;
     fs::write(&path, &bytes).unwrap();
     // Fast path: O(1) start-up, payload not hashed.
-    assert!(persist::load(dir.path(), LoadOptions { verify_vectors: false }).is_ok());
+    assert!(persist::load(
+        dir.path(),
+        LoadOptions {
+            verify_vectors: false
+        }
+    )
+    .is_ok());
     // Full verification catches it.
     assert!(persist::verify(dir.path()).is_err());
     fs::write(&path, &bytes[..bytes.len() - 4]).unwrap();
-    assert!(persist::load(dir.path(), LoadOptions { verify_vectors: false }).is_err());
+    assert!(persist::load(
+        dir.path(),
+        LoadOptions {
+            verify_vectors: false
+        }
+    )
+    .is_err());
     assert!(!Path::new(&dir.path().join("nope")).exists());
 }

@@ -59,11 +59,20 @@ fn check_agreement(idx: &Hnsw, model: &BTreeMap<u64, (Vec<f32>, u64)>, queries: 
             assert!(w[0].distance <= w[1].distance, "unsorted results");
         }
         for h in &hits {
-            assert!(model.contains_key(&h.key), "deleted/unknown key {} returned", h.key);
+            assert!(
+                model.contains_key(&h.key),
+                "deleted/unknown key {} returned",
+                h.key
+            );
             assert!(seen.insert(h.key), "duplicate key {}", h.key);
             assert_eq!(h.distance, l2(&model[&h.key].0, q));
         }
-        let exact: Vec<f32> = idx.exact_search(q, 5, None).unwrap().iter().map(|h| h.distance).collect();
+        let exact: Vec<f32> = idx
+            .exact_search(q, 5, None)
+            .unwrap()
+            .iter()
+            .map(|h| h.distance)
+            .collect();
         assert_eq!(exact, model_topk(model, q, 5));
     }
 }
