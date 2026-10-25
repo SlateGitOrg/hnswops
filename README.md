@@ -72,7 +72,7 @@ Requires a stable Rust toolchain (1.82 or newer). `make check` also needs
 `cargo-llvm-cov` and the `llvm-tools` component.
 
 ```sh
-make check          # fmt + clippy -D warnings + rustdoc + all tests under coverage (gate: 80% lines)
+make check          # fmt + clippy -D warnings + rustdoc + doc examples + all tests under coverage (gate: 80% lines)
 make demo           # offline end-to-end demo on the committed fixture
 make fetch-data     # optional: download SIFT10K (5.3 MB) and verify its checksums
 make bench          # recall/QPS curves -> bench/results/{fixture,siftsmall}.{json,md,svg}

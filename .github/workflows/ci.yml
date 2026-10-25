@@ -26,7 +26,7 @@ jobs:
           key: siftsmall-b8f1e59b
       - name: Fetch SIFT10K (best effort; the test skips if absent)
         run: ./scripts/fetch-sift.sh data || echo "SIFT10K unavailable; sift test will skip"
-      - name: make check (fmt, clippy -D warnings, rustdoc, tests + coverage >= 80%)
+      - name: make check (fmt, clippy -D warnings, rustdoc, doctests, tests + coverage >= 80%)
         run: make check
       - name: make demo
         run: make demo

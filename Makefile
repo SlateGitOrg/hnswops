@@ -3,9 +3,9 @@
 CARGO ?= cargo
 COVERAGE_MIN ?= 80
 
-.PHONY: check fmt fmt-check lint doc test cov demo bench bench-fixture bench-sift fetch-data loc clean
+.PHONY: check fmt fmt-check lint doc doctest test cov demo bench bench-fixture bench-sift fetch-data loc clean
 
-check: fmt-check lint doc cov ## format + clippy (zero warnings) + rustdoc + tests with coverage gate
+check: fmt-check lint doc doctest cov ## format + clippy (zero warnings) + rustdoc + doc examples + tests with coverage gate
 
 fmt:
 	$(CARGO) fmt --all
@@ -18,6 +18,9 @@ lint:
 
 doc:
 	RUSTDOCFLAGS="-D warnings" $(CARGO) doc --no-deps --locked
+
+doctest:
+	$(CARGO) test --doc --locked
 
 test:
 	$(CARGO) test --locked
