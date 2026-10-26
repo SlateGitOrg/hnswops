@@ -263,7 +263,7 @@ docs/         ARCHITECTURE.md
 
 ## Design decisions
 
-Every ruling and what it costs if it turns out wrong is in
+Every design decision and what it costs if it turns out wrong is in
 [DECISIONS.md](DECISIONS.md). The main ones:
 
 - **Tombstones first, repair second, vacuum on demand.** A deleted node can
